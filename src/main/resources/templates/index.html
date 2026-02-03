@@ -1,0 +1,487 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>闲置物品二手平台 - 首页</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background: #fff7e0;
+        }
+        .brand-color {
+            color: #ffb300;
+        }
+        .brand-bg {
+            background: linear-gradient(120deg, #ffb300, #ff8a00);
+        }
+        .search-bar {
+            border-radius: 999px;
+            background-color: rgba(255,255,255,.95);
+            padding: 6px 14px;
+            box-shadow: 0 8px 18px rgba(0,0,0,.08);
+        }
+        .category-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 14px;
+            background-color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 6px;
+            font-size: 22px;
+            box-shadow: 0 6px 15px rgba(0,0,0,.08);
+        }
+        .promo-card {
+            border-radius: 20px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 10px 25px rgba(0,0,0,.08);
+            transition: transform .15s ease-out, box-shadow .15s ease-out;
+        }
+        .promo-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 14px 30px rgba(0,0,0,.12);
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: #fff;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+        }
+        .bottom-nav-item {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .bottom-nav-item span {
+            display: block;
+        }
+        .bottom-nav-item.active {
+            color: #ff8a00;
+        }
+        .bottom-nav-item {
+            position: relative;
+        }
+        .message-badge {
+            position: absolute;
+            top: -2px;
+            right: 50%;
+            transform: translateX(20px);
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            background: #ff4d4f;
+            border-radius: 9px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #fff;
+            font-weight: bold;
+            line-height: 18px;
+        }
+        .message-badge.show {
+            display: flex;
+        }
+        .content-with-nav {
+            padding-bottom: 90px;
+        }
+        .carousel-fade .carousel-item {
+            opacity: 0;
+            transition: opacity 0.6s ease-in-out;
+        }
+        .carousel-fade .carousel-item.active {
+            opacity: 1;
+        }
+        .carousel-indicators {
+            margin-bottom: 0.5rem;
+        }
+        .carousel-indicators button {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background-color: rgba(255,255,255,0.5);
+            border: none;
+            margin: 0 3px;
+        }
+        .carousel-indicators button.active {
+            background-color: #fff;
+        }
+        /* 首页商品卡片 */
+        .product-card {
+            border-radius: 18px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 6px 18px rgba(0,0,0,.06);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+        }
+        .product-card-image {
+            position: relative;
+            padding-top: 70%; /* 7:10 宽高比 */
+            background: #f7f7f7;
+            overflow: hidden;
+        }
+        .product-card-image img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+        .product-card-body {
+            padding: 8px 10px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .product-title {
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 2px;
+        }
+        .product-price {
+            color: #ff4d4f;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .product-tag {
+            border-radius: 999px;
+            padding: 1px 8px;
+            border: 1px solid #eee;
+            font-size: 11px;
+            color: #999;
+            max-width: 70px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+    </style>
+</head>
+<body>
+<div class="brand-bg text-white pb-3 pt-3">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <div class="fw-bold fs-5">闲置物品交易平台</div>
+                <small>闲置换钱，更环保</small>
+            </div>
+            <div>
+                <a class="text-white small text-decoration-none"
+                   th:if="${session.username == null}"
+                   th:href="@{/auth/login}">登录 / 注册</a>
+            </div>
+        </div>
+        <form class="d-flex align-items-center gap-2" th:action="@{/product/list}" method="get">
+            <div class="search-bar flex-grow-1 d-flex align-items-center gap-2">
+                <span class="text-muted">🔍</span>
+                <input class="form-control border-0 p-0" type="text" name="keyword"
+                       placeholder="搜索手机、数码、服饰等">
+            </div>
+            <button class="btn btn-sm btn-outline-light ms-2" type="submit">站内搜</button>
+        </form>
+    </div>
+</div>
+
+<div class="container mt-3 content-with-nav">
+    <!-- 分类入口 -->
+    <div class="bg-white rounded-3 p-3 mb-3 shadow-sm">
+        <div class="row text-center">
+            <div class="col-3 mb-2">
+                <a th:href="@{/product/list(category='手机数码')}" class="text-decoration-none text-dark">
+                    <div class="category-icon">📱</div>
+                    <div class="small">手机数码</div>
+                </a>
+            </div>
+            <div class="col-3 mb-2">
+                <a th:href="@{/product/list(category='电脑办公')}" class="text-decoration-none text-dark">
+                    <div class="category-icon">💻</div>
+                    <div class="small">电脑办公</div>
+                </a>
+            </div>
+            <div class="col-3 mb-2">
+                <a th:href="@{/product/list(category='潮流服饰')}" class="text-decoration-none text-dark">
+                    <div class="category-icon">👕</div>
+                    <div class="small">潮流服饰</div>
+                </a>
+            </div>
+            <div class="col-3 mb-2">
+                <a th:href="@{/product/list(category='家居生活')}" class="text-decoration-none text-dark">
+                    <div class="category-icon">🏠</div>
+                    <div class="small">家居生活</div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 推荐好物区域 -->
+    <div class="mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h5 class="mb-0 fw-bold">推荐好物</h5>
+
+        </div>
+        <div class="row g-3">
+            <!-- 轮播推荐卡片 -->
+            <div class="col-12 col-md-8">
+                <div class="promo-card h-100">
+                    <!-- 如果有推荐商品，则轮播展示用户上传的商品图片，否则显示默认图 -->
+                    <div th:if="${#lists.isEmpty(recommendProducts) and (#lists.isEmpty(recommendImages) or recommendImages == null)}"
+                         style="background:url('https://img.alicdn.com/imgextra/i2/O1CN01b4lJ0h22suW2CYZSO_!!6000000007199-0-tps-920-320.jpg') center/cover;height:180px;border-radius:20px 20px 0 0;">
+                    </div>
+                    <!-- 如果没有推荐商品但有上传图片，则用文件夹图片轮播 -->
+                    <div th:if="${#lists.isEmpty(recommendProducts) and recommendImages != null and !#lists.isEmpty(recommendImages)}">
+                        <div id="recommendCarousel" class="carousel slide" data-bs-ride="carousel" data-bs-interval="3000">
+                            <div class="carousel-inner" style="border-radius:20px 20px 0 0;overflow:hidden;">
+                                <div class="carousel-item"
+                                     th:each="img,stat : ${recommendImages}"
+                                     th:classappend="${stat.index == 0} ? ' active'">
+                                    <div class="d-block w-100"
+                                         th:style="'background:url(' + ${img} + ') center/cover;height:180px;'">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 优先使用数据库中的推荐商品轮播 -->
+                    <div th:if="${!#lists.isEmpty(recommendProducts)}">
+                        <!-- 严格过滤：只显示有有效图片的商品（必须包含 /uploads/ 路径或图片扩展名） -->
+                        <div th:with="productsWithImages=${recommendProducts.?[imageUrl != null and !#strings.isEmpty(imageUrl) and (#strings.contains(imageUrl, '/uploads/') or #strings.contains(imageUrl, '.jpg') or #strings.contains(imageUrl, '.jpeg') or #strings.contains(imageUrl, '.png') or #strings.contains(imageUrl, '.gif') or #strings.contains(imageUrl, '.webp'))]}">
+                            <!-- 轮播容器 -->
+                            <div th:if="${!#lists.isEmpty(productsWithImages)}">
+                                <div id="recommendCarousel" class="carousel slide carousel-fade" data-bs-ride="carousel" data-bs-interval="3000" data-bs-pause="false">
+                                    <!-- 轮播指示器（多个商品时显示） -->
+                                    <div class="carousel-indicators" th:if="${#lists.size(productsWithImages)} > 1">
+                                        <button type="button" 
+                                                th:each="iterStat : ${#numbers.sequence(0, #lists.size(productsWithImages) - 1)}"
+                                                th:data-bs-target="'#recommendCarousel'"
+                                                th:data-bs-slide-to="${iterStat}"
+                                                th:classappend="${iterStat == 0} ? ' active'"
+                                                th:attr="aria-current=${iterStat == 0} ? 'true' : 'false'"
+                                                aria-label="Slide"></button>
+                                    </div>
+                                    <!-- 轮播内容 -->
+                                    <div class="carousel-inner" style="border-radius:20px 20px 0 0;overflow:hidden;">
+                                        <div class="carousel-item"
+                                             th:each="p,stat : ${productsWithImages}"
+                                             th:with="firstImage=${#strings.contains(p.imageUrl, ',') ? #strings.substringBefore(p.imageUrl, ',') : p.imageUrl}"
+                                             th:classappend="${stat.index == 0} ? ' active'">
+                                            <a th:href="@{'/product/detail'(id=${p.id})}" class="text-decoration-none">
+                                                <div class="d-block w-100 position-relative" style="height:180px;overflow:hidden;background:#f7f7f7;">
+                                                    <img th:src="${firstImage}" 
+                                                         class="w-100 h-100" 
+                                                         alt="商品图"
+                                                         style="object-fit:cover;"
+                                                         onerror="this.onerror=null; this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                                                    <div class="d-flex align-items-center justify-content-center h-100 text-muted small" 
+                                                         style="display:none;">
+                                                        图片加载失败
+                                                    </div>
+                                                    <!-- 商品信息遮罩层 -->
+                                                    <div class="position-absolute bottom-0 start-0 end-0 p-3" 
+                                                         style="background:linear-gradient(transparent, rgba(0,0,0,0.75));">
+                                                        <div class="text-white fw-bold mb-1" 
+                                                             style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:15px;"
+                                                             th:text="${p.title}"></div>
+                                                        <div class="text-white fw-bold" 
+                                                             style="text-shadow: 0 2px 4px rgba(0,0,0,0.8);font-size:18px;"
+                                                             th:text="'￥' + ${p.price}"></div>
+                                                    </div>
+                                                </div>
+                                            </a>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            <!-- 如果没有有图片的商品，显示默认图 -->
+                            <div th:if="${#lists.isEmpty(productsWithImages)}"
+                                 style="background:url('https://img.alicdn.com/imgextra/i2/O1CN01b4lJ0h22suW2CYZSO_!!6000000007199-0-tps-920-320.jpg') center/cover;height:180px;border-radius:20px 20px 0 0;">
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 卡片底部信息 -->
+                    <div class="p-3 border-top">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <div class="small text-muted mb-1">精选推荐</div>
+                                <div class="fw-bold brand-color">热门二手好物</div>
+                            </div>
+                            <div class="text-muted small">
+                                <span th:text="${#lists.isEmpty(recommendProducts) ? 0 : #lists.size(recommendProducts)}">0</span> 件好物
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- 发布卡片 -->
+            <div class="col-12 col-md-4">
+                <a th:href="@{/product/publish}" class="text-decoration-none text-dark">
+                    <div class="promo-card h-100 d-flex flex-column">
+                        <div class="flex-grow-1 d-flex align-items-center justify-content-center" 
+                             style="background:linear-gradient(135deg, #fff3e0 0%, #ffe0b2 100%);min-height:180px;border-radius:20px 20px 0 0;">
+                            <div class="text-center">
+                                <div style="font-size:48px;margin-bottom:12px;">✨</div>
+                                <div class="fw-bold text-dark small">发布闲置</div>
+                            </div>
+                        </div>
+                        <div class="p-3 border-top">
+                            <div class="small text-muted mb-1">闲置变现</div>
+                            <div class="fw-bold brand-color">发布你的第一件闲置</div>
+                        </div>
+                    </div>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- 所有在售商品列表 -->
+    <div class="d-flex justify-content-between align-items-center mb-2">
+        <h6 class="mb-0 fw-bold">商品列表</h6>
+        <span class="small text-muted" th:text="${#lists.size(allProducts)} + ' 件在售'">0 件在售</span>
+        <a class="small text-decoration-none text-primary" th:href="@{/product/list}">查看全部 &gt;</a>
+    </div>
+    <div class="row row-cols-2 row-cols-md-4 g-3" th:if="${!#lists.isEmpty(allProducts)}">
+        <div class="col" th:each="p : ${allProducts}"
+             th:with="firstImage=${p.imageUrl != null && #strings.contains(p.imageUrl, ',') ? #strings.substringBefore(p.imageUrl, ',') : p.imageUrl}">
+            <a class="text-decoration-none text-dark" th:href="@{'/product/detail'(id=${p.id})}">
+                <div class="product-card">
+                    <div class="product-card-image">
+                        <img th:if="${firstImage != null and !firstImage.isEmpty()}"
+                             th:src="@{${firstImage}}"
+                             alt="商品图">
+                        <div th:if="${firstImage == null or firstImage.isEmpty()}"
+                             class="d-flex align-items-center justify-content-center h-100 text-muted small">
+                            无图
+                        </div>
+                    </div>
+                    <div class="product-card-body">
+                        <div class="product-title" th:text="${p.title}"></div>
+                        <div class="product-meta">
+                            <span class="product-price" th:text="'￥' + ${p.price}"></span>
+                            <span class="product-tag" th:text="${p.category} ?: '其他'"></span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+    <div class="row" th:if="${#lists.isEmpty(allProducts)}">
+        <div class="col">
+            <p class="text-muted small mt-2 text-center">暂无在售商品，快去发布一个吧～</p>
+        </div>
+    </div>
+</div>
+
+<!-- 底部导航骨架 -->
+<div class="bottom-nav">
+    <a th:href="@{/}" class="text-decoration-none bottom-nav-item active">
+        <span>🏠</span>
+        <span>首页</span>
+    </a>
+    <a th:href="@{/pond}" class="text-decoration-none bottom-nav-item">
+        <span>🐟</span>
+        <span>鱼塘</span>
+    </a>
+    <a th:href="@{/product/publish}" class="text-decoration-none bottom-nav-item">
+        <span>➕</span>
+        <span>发布</span>
+    </a>
+    <a th:href="@{/messages}" class="text-decoration-none bottom-nav-item" id="messagesNavItem">
+        <span>💬</span>
+        <span>消息</span>
+        <span class="message-badge" id="messageBadge">0</span>
+    </a>
+
+<!--    删除物品功能-->
+    <a th:if="${session.username != null}" th:href="@{/user/center}" class="text-decoration-none bottom-nav-item">
+        <span>👤</span>
+        <span>个人中心</span>
+    </a>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // 全局消息数量提示
+    (function() {
+        const messageBadge = document.getElementById('messageBadge');
+        if (!messageBadge) return;
+        
+        let isPolling = true;
+        let lastUnreadCount = -1; // 状态缓存
+        
+        function updateMessageBadge(unreadCount) {
+            // 统一转成数字，避免字符串比较问题
+            const count = parseInt(unreadCount, 10) || 0;
+
+            // 只在状态变化时更新 DOM
+            if (count !== lastUnreadCount) {
+                if (count > 0) {
+                    messageBadge.textContent = count > 99 ? '99+' : count;
+                    messageBadge.classList.add('show');
+                } else {
+                    // 0 条或无数据：彻底隐藏并清空文本，避免出现“0”红点
+                    messageBadge.classList.remove('show');
+                }
+                lastUnreadCount = count;
+            }
+        }
+        
+        function checkUnreadMessages() {
+            if (!isPolling) return;
+            fetch('/messages/unread-count')
+                .then(res => res.json())
+                .then(data => {
+                    const unreadCount = data.unreadCount || 0;
+                    updateMessageBadge(unreadCount);
+                })
+                .catch(err => {
+                    // 静默失败
+                });
+        }
+        
+        // 每2秒检查一次
+        const pollInterval = setInterval(checkUnreadMessages, 2000);
+        
+        // 立即检查一次
+        checkUnreadMessages();
+        
+        // 页面可见性变化时暂停/恢复轮询
+        document.addEventListener('visibilitychange', function() {
+            isPolling = !document.hidden;
+            if (isPolling) {
+                checkUnreadMessages();
+            }
+        });
+        
+        // 窗口获得焦点时立即检查
+        window.addEventListener('focus', function() {
+            checkUnreadMessages();
+        });
+        
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', function() {
+            clearInterval(pollInterval);
+        });
+    })();
+</script>
+</body>
+</html>

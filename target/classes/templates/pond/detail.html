@@ -1,0 +1,594 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>动态详情 - 鱼塘社区</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        :root {
+            /* 页面背景改为与商品详情一致的浅米色 */
+            --bg-color: #fff7e0;
+            --brand-orange: #ff8a00;
+            --brand-gradient: linear-gradient(135deg, #ffb300, #ff8a00);
+            --nav-height: 0px;        /* 当前页面无底部导航栏，视为 0 高度 */
+            --input-bar-height: 56px; /* 评论输入条高度 */
+            --header-height: 50px;    /* 顶部标题栏高度 */
+        }
+
+        body {
+            background-color: var(--bg-color);
+            padding-top: var(--header-height);
+            /* 底部只为输入条和一点缓冲留空间，避免出现大片空白 */
+            padding-bottom: calc(var(--input-bar-height) + 20px);
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            color: #333;
+        }
+
+        /* --- 1. 顶部导航栏 (Sticky) --- */
+        .page-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: var(--header-height);
+            background: rgba(255, 247, 224, 0.95);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            z-index: 1000;
+            border-bottom: 1px solid rgba(0,0,0,0.05);
+        }
+        .back-btn {
+            background: none;
+            border: none;
+            font-size: 20px;
+            color: #333;
+            padding: 0 10px 0 0;
+            line-height: 1;
+        }
+        .header-title {
+            flex-grow: 1;
+            text-align: center;
+            font-weight: 600;
+            font-size: 16px;
+            margin-right: 30px; /* 平衡左侧返回按钮的宽度 */
+        }
+
+        /* --- 2. 卡片通用样式 --- */
+        .content-card {
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 4px 12px rgba(166, 140, 100, 0.08);
+            margin: 12px 0;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.6);
+        }
+
+        /* --- 3. 帖子内容区 --- */
+        .post-header {
+            padding: 16px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .user-avatar {
+            width: 42px;
+            height: 42px;
+            border-radius: 50%;
+            border: 2px solid #fff;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+            object-fit: cover;
+        }
+        .user-info .name { font-weight: bold; font-size: 15px; color: #333; }
+        .user-info .meta { font-size: 11px; color: #999; margin-top: 2px; }
+
+        .post-body { padding: 0 16px 16px; }
+        .post-text {
+            font-size: 16px;
+            line-height: 1.6;
+            color: #222;
+            white-space: pre-line;
+            margin-bottom: 12px;
+        }
+
+        /* --- 4. 智能九宫格适配 --- */
+        .post-images-grid {
+            display: grid;
+            gap: 5px;
+            margin: 0 auto;        /* 居中显示 */
+        }
+        .grid-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            border-radius: 6px;
+            background: var(--bg-color); /* 照片区域使用主题背景色 */
+            aspect-ratio: 1;
+            cursor: pointer;
+        }
+
+        /* 规则A: 1张图 (自适应大图) */
+        .post-images-grid[data-count="1"] {
+            grid-template-columns: 1fr;
+            max-width: 260px;      /* 单图更窄，减少左右留白 */
+        }
+        .post-images-grid[data-count="1"] .grid-image {
+            aspect-ratio: auto;
+            max-height: 160px;     /* 单图高度进一步缩小，接近列表卡片 */
+            object-fit: contain;
+            border: 1px solid #f0f0f0;
+        }
+
+        /* 规则B: 2张 或 4张图 (2列模式) */
+        .post-images-grid[data-count="2"],
+        .post-images-grid[data-count="4"] {
+            grid-template-columns: repeat(2, 1fr);
+            max-width: 320px;      /* 两张/四张图时略宽 */
+        }
+
+        /* 规则C: 3张, 5-9张图 (3列模式) */
+        .post-images-grid[data-count="3"] {
+            grid-template-columns: repeat(3, 1fr);
+            max-width: 320px;      /* 三张图时接近一行商品卡宽度 */
+        }
+
+        .post-images-grid[data-count="5"],
+        .post-images-grid[data-count="6"],
+        .post-images-grid[data-count="7"],
+        .post-images-grid[data-count="8"],
+        .post-images-grid[data-count="9"] {
+            grid-template-columns: repeat(3, 1fr);
+            max-width: 360px;      /* 5~9 张图使用更宽的九宫格 */
+        }
+
+        /* --- 5. 评论区样式 --- */
+        .comment-header {
+            padding: 12px 16px;
+            border-bottom: 1px solid #f9f9f9;
+            font-size: 14px;
+            font-weight: 600;
+            color: #666;
+            display: flex;
+            justify-content: space-between;
+        }
+        .comment-item {
+            padding: 16px;
+            border-bottom: 1px solid #fcfcfc;
+            display: flex;
+            gap: 12px;
+        }
+        .comment-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #f0f0f0;
+            object-fit: cover;
+        }
+        .comment-content { flex: 1; }
+        .comment-user { font-size: 13px; font-weight: 600; color: #555; }
+        .comment-text { font-size: 14px; color: #333; margin-top: 4px; line-height: 1.5; white-space: pre-line; }
+        .comment-meta {
+            margin-top: 6px;
+            font-size: 11px;
+            color: #bbb;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .delete-btn {
+            color: #ff6b6b;
+            background: none;
+            border: none;
+            padding: 2px 6px;
+            font-size: 11px;
+            cursor: pointer;
+        }
+
+        /* --- 现代简约风格删除确认弹窗 --- */
+        .confirm-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .confirm-backdrop.show {
+            display: flex;
+        }
+        .confirm-dialog {
+            width: 78%;
+            max-width: 360px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+            padding: 18px 18px 12px;
+        }
+        .confirm-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .confirm-text {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+        .confirm-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .confirm-btn {
+            border-radius: 999px;
+            padding: 6px 16px;
+            font-size: 13px;
+            border: none;
+        }
+        .confirm-btn-cancel {
+            background: #f5f5f5;
+            color: #666;
+        }
+        .confirm-btn-danger {
+            background: #ff4d4f;
+            color: #fff;
+        }
+
+        /* --- 6. 悬浮评论输入框 (位于底部导航之上) --- */
+        .fixed-comment-bar {
+            position: fixed;
+            bottom: 0; /* 页面已无底部导航，评论条直接贴底部 */
+            left: 0;
+            right: 0;
+            background: #fff;
+            padding: 8px 16px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            height: var(--input-bar-height);
+            border-top: 1px solid #f5f5f5;
+        }
+        .input-wrapper {
+            flex-grow: 1;
+            background: #f5f5f5;
+            border-radius: 20px;
+            padding: 0 12px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+        }
+        .comment-input {
+            border: none;
+            background: transparent;
+            width: 100%;
+            font-size: 14px;
+            outline: none;
+            padding: 0;
+        }
+        .send-btn {
+            color: #fff;
+            background: var(--brand-gradient);
+            border: none;
+            border-radius: 18px;
+            padding: 0 16px;
+            font-size: 13px;
+            font-weight: 600;
+            height: 32px;
+            line-height: 32px;
+            box-shadow: 0 2px 6px rgba(255, 138, 0, 0.2);
+        }
+
+        /* --- 7. 底部导航栏 --- */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: var(--nav-height);
+            background-color: #fff;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+        }
+        .bottom-nav-item {
+            font-size: 10px;
+            color: #999;
+            text-align: center;
+            text-decoration: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 20%;
+            position: relative; /* 用于定位红点 */
+        }
+        .bottom-nav-item span:first-child { font-size: 20px; margin-bottom: 2px; }
+        .bottom-nav-item.active { color: var(--brand-orange); }
+
+        /* --- 消息红点样式 (修复版) --- */
+        .message-badge {
+            position: absolute;
+            top: 2px;
+            right: 50%;
+            transform: translateX(18px); /* 向右偏移，对齐图标右上角 */
+            min-width: 16px;
+            height: 16px;
+            padding: 0 4px;
+            background: #ff4d4f;
+            border-radius: 10px;
+            display: none; /* 默认隐藏 */
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #fff;
+            font-weight: bold;
+            line-height: 16px;
+            border: 1px solid #fff;
+            z-index: 1002; /* 确保在最上层 */
+            box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+        }
+        .message-badge.show { display: flex; }
+
+        .empty-state { text-align: center; padding: 40px 0; color: #ccc; font-size: 13px; }
+    </style>
+</head>
+<body th:attr="data-user-id=${userId}">
+
+<div class="page-header">
+    <button class="back-btn" onclick="history.back()">❮</button>
+</div>
+
+<div class="container">
+    <div class="content-card" th:attr="data-post-owner-id=${post.userId}">
+        <div class="post-header">
+            <img th:src="${post.userAvatar != null ? post.userAvatar : '/uploads/default-avatar.png'}"
+                 class="user-avatar"
+                 th:alt="${post.username}">
+            <div class="user-info">
+                <div class="name" th:text="${post.username}">用户</div>
+                <div class="meta">
+                    <span th:text="${#temporals.format(post.createTime, 'yyyy-MM-dd HH:mm')}">时间</span>
+                    <span th:if="${post.city}" th:text="'· ' + ${post.city}">· 城市</span>
+                </div>
+            </div>
+            <span th:if="${post.category}" class="badge rounded-pill fw-normal ms-auto"
+                  style="background: #fff8e1; color: #ff8a00; border: 1px solid #ffecb3;"
+                  th:text="${post.category}">分类</span>
+        </div>
+
+        <div class="post-body">
+            <div class="post-text" th:text="${post.content}">动态内容...</div>
+
+            <div th:if="${post.images != null and !#strings.isEmpty(post.images)}"
+                 class="post-images-grid"
+                 th:with="imgList=${#strings.arraySplit(post.images, ',')}"
+                 th:attr="data-count=${#arrays.length(imgList)}">
+                <img th:each="img : ${imgList}"
+                     th:src="${img}"
+                     class="grid-image"
+                     onclick="window.open(this.src, '_blank')">
+            </div>
+        </div>
+    </div>
+
+    <div class="content-card">
+        <div class="comment-header">
+            <span>评论</span>
+            <span class="text-muted fw-normal" id="commentCount" th:text="${#lists.size(comments)}">0</span>
+        </div>
+
+        <div id="commentsContainer">
+            <div th:if="${#lists.isEmpty(comments)}" id="emptyComments" class="empty-state">
+                <div>💬</div>
+                <div>暂无评论，快来抢沙发～</div>
+            </div>
+
+            <div class="comment-item" th:each="comment : ${comments}" th:attr="data-comment-id=${comment.id}">
+                <img th:src="${comment.userAvatar != null ? comment.userAvatar : '/uploads/default-avatar.png'}"
+                     class="comment-avatar" onerror="this.src='/uploads/default-avatar.png'">
+                <div class="comment-content">
+                    <div class="comment-user" th:text="${comment.username}">用户</div>
+                    <div class="comment-text" th:text="${comment.content}">内容</div>
+                    <div class="comment-meta">
+                        <span th:text="${#temporals.format(comment.createTime, 'MM-dd HH:mm')}">时间</span>
+
+                        <div th:if="${userId != null and (post.userId == userId or comment.userId == userId)}">
+                            <form th:action="@{/pond/comment/delete/{id}(id=${comment.id})}" method="post"
+                                  style="display: inline;"
+                                  class="delete-form">
+                                <button type="submit" class="delete-btn">删除</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="fixed-comment-bar">
+    <div th:if="${session.username == null}" class="w-100 text-center">
+        <a th:href="@{/auth/login}" class="text-decoration-none text-muted small">登录后发表评论</a>
+    </div>
+
+    <form th:if="${session.username != null}" id="commentForm" class="w-100 d-flex align-items-center"
+          th:action="@{/pond/comment}" method="post">
+        <input type="hidden" name="postId" th:value="${post.id}" id="postId">
+        <div class="input-wrapper">
+            <input type="text" class="comment-input" name="content" id="commentContent"
+                   placeholder="说点什么..." autocomplete="off" required>
+        </div>
+        <button type="submit" class="send-btn">发送</button>
+    </form>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    // --- 逻辑：评论刷新与提交 ---
+    (function() {
+        const container = document.getElementById('commentsContainer');
+        const countSpan = document.getElementById('commentCount');
+        const emptyDiv = document.getElementById('emptyComments');
+        // 兼容不支持可选链语法的旧浏览器
+        const postIdInput = document.getElementById('postId');
+        const postId = postIdInput ? postIdInput.value : null;
+        const form = document.getElementById('commentForm');
+        const input = document.getElementById('commentContent');
+
+        if (!container || !postId) return;
+
+        let lastIds = new Set();
+        let currentUserId = document.body.getAttribute('data-user-id');
+        const postOwnerElement = document.querySelector('[data-post-owner-id]');
+        let postOwnerId = postOwnerElement ? postOwnerElement.getAttribute('data-post-owner-id') : null;
+
+        // 初始化ID
+        document.querySelectorAll('[data-comment-id]').forEach(el =>
+            lastIds.add(parseInt(el.getAttribute('data-comment-id')))
+        );
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+        }
+
+        function appendComment(comment) {
+            if (lastIds.has(comment.id)) return;
+            lastIds.add(comment.id);
+            if (emptyDiv) emptyDiv.remove();
+
+            const date = new Date(comment.createTime);
+            const timeStr = `${String(date.getMonth()+1).padStart(2,'0')}-${String(date.getDate()).padStart(2,'0')} ${String(date.getHours()).padStart(2,'0')}:${String(date.getMinutes()).padStart(2,'0')}`;
+            const avatar = comment.userAvatar || '/uploads/default-avatar.png';
+
+            const canDelete = currentUserId && (postOwnerId == currentUserId || comment.userId == currentUserId);
+            const deleteBtn = canDelete ?
+                `<form action="/pond/comment/delete/${comment.id}" method="post" style="display:inline" class="delete-form">
+                    <button type="submit" class="delete-btn">删除</button>
+                 </form>` : '';
+
+            const html = `
+                <div class="comment-item" data-comment-id="${comment.id}">
+                    <img src="${avatar}" class="comment-avatar" onerror="this.src='/uploads/default-avatar.png'">
+                    <div class="comment-content">
+                        <div class="comment-user">${escapeHtml(comment.username)}</div>
+                        <div class="comment-text">${escapeHtml(comment.content)}</div>
+                        <div class="comment-meta">
+                            <span>${timeStr}</span>
+                            ${deleteBtn}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            const div = document.createElement('div');
+            div.innerHTML = html;
+            const newItem = div.firstElementChild;
+            container.appendChild(newItem); // 追加到列表末尾
+
+            // 绑定删除按钮的确认弹窗
+            const newDeleteForm = newItem.querySelector('.delete-form');
+            if (newDeleteForm) {
+                bindDeleteConfirm(newDeleteForm);
+            }
+
+            // 自动滚动以查看新评论
+            div.firstElementChild.scrollIntoView({behavior: "smooth", block: "center"});
+
+            if (countSpan) countSpan.textContent = lastIds.size;
+        }
+
+        // 绑定已有删除表单
+        function bindDeleteConfirm(form) {
+            if (!form) return;
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                openDeleteConfirm(form);
+            });
+        }
+        document.querySelectorAll('.delete-form').forEach(bindDeleteConfirm);
+
+        // AJAX 提交评论
+        if (form) {
+            form.addEventListener('submit', function(e) {
+                e.preventDefault();
+                const content = input.value.trim();
+                if (!content) return;
+
+                const formData = new FormData();
+                formData.append('postId', postId);
+                formData.append('content', content);
+
+                fetch('/pond/comment', { method: 'POST', body: formData })
+                    .then(res => {
+                        if(res.ok) {
+                            input.value = '';
+                            poll(); // 立即刷新
+                        } else {
+                            alert('发送失败，请重试');
+                        }
+                    })
+                    .catch(err => alert('网络错误'));
+            });
+        }
+
+        function poll() {
+            if (document.hidden) return;
+            fetch(`/pond/post/${postId}/comments/api`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success && data.comments) {
+                        data.comments.forEach(appendComment);
+                    }
+                })
+                .catch(() => {});
+        }
+        setInterval(poll, 3000);
+    })();
+
+    // --- 现代简约删除确认弹窗逻辑 ---
+    let pendingDeleteForm = null;
+    function openDeleteConfirm(form) {
+        pendingDeleteForm = form;
+        const modal = document.getElementById('deleteConfirmModal');
+        if (modal) {
+            modal.classList.add('show');
+        }
+    }
+    function closeDeleteConfirm() {
+        const modal = document.getElementById('deleteConfirmModal');
+        if (modal) {
+            modal.classList.remove('show');
+        }
+        pendingDeleteForm = null;
+    }
+    function confirmDelete() {
+        if (pendingDeleteForm) {
+            const form = pendingDeleteForm;
+            closeDeleteConfirm();
+            form.submit();
+        }
+    }
+</script>
+
+<!-- 现代简约风格删除确认弹窗 -->
+<div id="deleteConfirmModal" class="confirm-backdrop">
+    <div class="confirm-dialog">
+        <div class="confirm-title">删除评论</div>
+        <div class="confirm-text">确定要删除这条评论吗？删除后将无法恢复。</div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn confirm-btn-cancel" onclick="closeDeleteConfirm()">取消</button>
+            <button type="button" class="confirm-btn confirm-btn-danger" onclick="confirmDelete()">删除</button>
+        </div>
+    </div>
+</div>
+</body>
+</html>

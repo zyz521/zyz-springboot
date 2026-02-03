@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title th:text="${product.title} + ' - 商品详情 - 二手鱼塘'">商品详情 - 二手鱼塘</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background: #fff7e0;
+        }
+        :root {
+            --brand-gradient: linear-gradient(135deg, #ffb300, #ff8a00);
+        }
+        .brand-bg {
+            /* 将页面两侧背景色改为与主题一致的浅米色 */
+            background: #fff7e0;
+        }
+        .page-container {
+            max-width: 960px;
+        }
+        .detail-shell {
+            background: #fff;
+            border-radius: 24px;
+            box-shadow: 0 18px 40px rgba(0,0,0,.12);
+            padding: 24px;
+            margin-top: -60px;
+        }
+        .detail-layout {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+            gap: 24px;
+        }
+        .info-pill {
+            background: rgba(255,138,0,.15);
+            color: #ff8a00;
+            border-radius: 999px;
+            padding: 4px 12px;
+            font-size: 12px;
+        }
+        .comment-card {
+            background: #fff;
+            border-radius: 14px;
+            padding: 14px;
+            box-shadow: 0 6px 15px rgba(0,0,0,.05);
+        }
+        .comments-wrapper {
+            margin-top: 32px;
+            background: #fff;
+            border-radius: 20px;
+            padding: 24px;
+            box-shadow: 0 10px 25px rgba(0,0,0,.08);
+        }
+        .comment-form textarea {
+            resize: none;
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: #fff;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+        }
+        .bottom-nav-item {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .bottom-nav-item span {
+            display: block;
+        }
+        .bottom-nav-item.active {
+            color: #ff8a00;
+        }
+        .bottom-nav-item {
+            position: relative;
+        }
+        .message-badge {
+            position: absolute;
+            top: -2px;
+            right: 50%;
+            transform: translateX(20px);
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            background: #ff4d4f;
+            border-radius: 9px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #fff;
+            font-weight: bold;
+            line-height: 18px;
+        }
+        .message-badge.show {
+            display: flex;
+        }
+        .content-with-nav {
+            padding-bottom: 90px;
+        }
+        .price-tag {
+            font-size: 32px;
+            font-weight: bold;
+            color: #ff4d4f;
+        }
+        .image-modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+            cursor: pointer;
+        }
+        .image-modal img {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+            margin-top: 5%;
+        }
+        .image-modal .close {
+            position: absolute;
+            top: 20px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .image-modal .close:hover {
+            color: #fff;
+        }
+        /* 统一评论输入条样式（与鱼塘帖子详情保持一致风格） */
+        .fixed-comment-bar {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: #fff;
+            padding: 8px 16px;
+            box-shadow: 0 -2px 10px rgba(0,0,0,0.03);
+            z-index: 1001;
+            display: flex;
+            align-items: center;
+            height: 56px;
+            border-top: 1px solid #f5f5f5;
+        }
+        .input-wrapper {
+            flex-grow: 1;
+            background: #f5f5f5;
+            border-radius: 20px;
+            padding: 0 12px;
+            height: 36px;
+            display: flex;
+            align-items: center;
+            margin-right: 10px;
+        }
+        .comment-input {
+            border: none;
+            background: transparent;
+            width: 100%;
+            font-size: 14px;
+            outline: none;
+            padding: 0;
+        }
+        .send-btn {
+            color: #fff;
+            background: var(--brand-gradient);
+            border: none;
+            border-radius: 18px;
+            padding: 0 16px;
+            font-size: 13px;
+            font-weight: 600;
+            height: 32px;
+            line-height: 32px;
+            box-shadow: 0 2px 6px rgba(255, 138, 0, 0.2);
+        }
+    </style>
+</head>
+<body>
+<div class="brand-bg text-white pb-3 pt-3">
+    <div class="container page-container">
+        <div class="d-flex justify-content-between align-items-center mb-2">
+            <a th:href="@{/product/list}" class="text-white text-decoration-none small">&lt; 返回列表</a>
+            <div class="fw-bold">商品详情</div>
+            <span></span>
+        </div>
+        <div th:if="${error}" class="alert alert-danger py-2 mb-3" th:text="${error}">错误信息</div>
+        <div class="detail-shell text-dark content-with-nav">
+            <div class="detail-layout">
+                <div>
+                    <div class="mb-3">
+                        <div th:if="${product.imageUrl != null and !product.imageUrl.isEmpty()}">
+                            <!-- 使用JavaScript处理多图显示 -->
+                            <div id="productImages" th:attr="data-images=${product.imageUrl}">
+                                <!-- 图片将通过JavaScript动态加载 -->
+                            </div>
+                        </div>
+                        <div th:if="${product.imageUrl == null or product.imageUrl.isEmpty()}"
+                             class="text-muted small text-center py-5"
+                             style="background:#f8f9fa;border-radius:16px;">
+                            暂无图片
+
+                        </div>
+                    </div>
+
+                    <h3 class="mb-3" th:text="${product.title}">标题</h3>
+                    <div class="d-flex flex-wrap gap-2 align-items-center mb-3">
+                        <div class="price-tag" th:text="'￥' + ${product.price}">￥0.00</div>
+                        <span class="info-pill" th:text="${product.category}">分类</span>
+                        <span class="info-pill" th:text="${#temporals.format(product.createTime,'yyyy/MM/dd HH:mm')}">时间</span>
+                    </div>
+                    <div class="mb-3">
+                        <div class="small text-muted mb-1">宝贝描述</div>
+                        <p class="mb-0" style="white-space: pre-line;" th:text="${product.description}">描述</p>
+                    </div>
+                    <div class="mt-4 d-flex gap-2">
+                        <form th:action="@{/product/favorite}" method="post" class="flex-fill">
+                            <input type="hidden" name="productId" th:value="${product.id}">
+                            <button class="btn btn-outline-secondary w-100 fw-bold py-3" type="submit">❤ 收藏</button>
+                        </form>
+                        <a th:href="@{'/order/confirm/' + ${product.id}}" class="btn btn-warning w-100 text-white fw-bold py-3 text-decoration-none" 
+                           th:if="${session.userId != null and session.userId != product.userId and product.status == 0}">立即购买</a>
+                        <button class="btn btn-secondary w-100 fw-bold py-3" disabled 
+                                th:if="${product.status != 0}">已售出</button>
+                        <button class="btn btn-secondary w-100 fw-bold py-3" disabled 
+                                th:if="${session.userId != null and session.userId == product.userId}">自己的商品</button>
+                        <a th:href="@{/auth/login}" class="btn btn-warning w-100 text-white fw-bold py-3 text-decoration-none" 
+                           th:if="${session.userId == null}">登录后购买</a>
+                    </div>
+                    <!-- 联系卖家 -->
+                    <div class="mt-3 p-3 rounded-3" style="background:#fff3e0;">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="fw-semibold">联系卖家</div>
+                            <small class="text-muted" th:text="${session.username != null ? session.username : '请先登录'}"></small>
+                        </div>
+                        <div th:if="${session.username == null}" class="text-muted small">
+                            请先 <a th:href="@{/auth/login}">登录</a> 后再联系卖家。
+                        </div>
+                        <div th:if="${session.username != null}">
+                            <div th:if="${session.userId != null and session.userId == product.userId}" class="text-muted small">
+                                这是你发布的商品，无法给自己发送消息。
+                            </div>
+                            <form th:if="${session.userId == null or session.userId != product.userId}"
+                                  th:action="@{/messages/send}"
+                                  method="post">
+                                <input type="hidden" name="productId" th:value="${product.id}">
+                                <div class="mb-2">
+                                    <textarea class="form-control" name="content" rows="3"
+                                              placeholder="想了解价格、成色、面交地点等，给卖家留言吧"
+                                              required></textarea>
+                                </div>
+                                <button class="btn btn-outline-primary w-100" type="submit">发送消息</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="comments-wrapper">
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <h6 class="mb-0">商品评价</h6>
+                    <span class="text-muted small" th:text="${#lists.size(comments)} + ' 条'">0 条</span>
+                </div>
+                <div class="row g-3">
+                    <div class="col-md-8">
+                        <div th:if="${#lists.isEmpty(comments)}" class="text-muted small mb-3">
+                            暂无评论，快来抢沙发～
+                        </div>
+                        <div class="d-flex flex-column gap-3">
+                            <div th:each="c : ${comments}" class="comment-card">
+                                <div class="d-flex justify-content-between align-items-center mb-1">
+                                    <span class="fw-bold small" th:text="${c.username}">用户</span>
+                                    <span class="text-muted small"
+                                          th:text="${#temporals.format(c.createTime, 'yyyy-MM-dd HH:mm')}">时间</span>
+                                </div>
+                                <div class="small mb-1" style="white-space: pre-line;" th:text="${c.content}">评论内容</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="comment-form">
+                            <div class="small text-muted">
+                                在页面底部评论框中发表你的商品评价～
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <!-- 图片预览模态框 -->
+    <div id="imageModal" class="image-modal" onclick="closeImageModal()">
+        <span class="close">&times;</span>
+        <img id="modalImage" src="" alt="预览">
+    </div>
+
+    <!-- 底部统一样式评论输入条 -->
+    <div class="fixed-comment-bar">
+        <div th:if="${session.username == null}" class="w-100 text-center">
+            <a th:href="@{/auth/login}" class="text-decoration-none text-muted small">登录后发表评论</a>
+        </div>
+
+        <form th:if="${session.username != null}"
+              class="w-100 d-flex align-items-center"
+              th:action="@{/product/comment}" method="post">
+            <input type="hidden" name="productId" th:value="${product.id}">
+            <div class="input-wrapper">
+                <input type="text" class="comment-input" name="content"
+                       placeholder="说说你的使用感受吧～" autocomplete="off" required>
+            </div>
+            <button type="submit" class="send-btn">发送</button>
+        </form>
+    </div>
+
+    <script>
+        // 加载商品图片
+        (function() {
+            const imagesContainer = document.getElementById('productImages');
+            if (imagesContainer) {
+                const imagesStr = imagesContainer.getAttribute('data-images');
+                if (imagesStr) {
+                    const images = imagesStr.split(',').map(url => url.trim()).filter(url => url);
+                    if (images.length > 1) {
+                        // 多图展示（用 contain 避免裁剪）
+                        let html = '<div class="row g-2 mb-2">';
+                        images.forEach(imgUrl => {
+                            html += `<div class="col-6 col-md-4">
+                            <img src="${imgUrl}"
+                                 alt="商品图"
+                                 class="w-100"
+                                 style="height:200px;object-fit:contain;background:#f7f7f7;border-radius:12px;cursor:pointer;"
+                                 onclick="showImageModal(this.src)">
+                        </div>`;
+                        });
+                        html += '</div>';
+                        imagesContainer.innerHTML = html;
+                    } else if (images.length === 1) {
+                        // 单图展示（contain 避免被裁剪）
+                        imagesContainer.innerHTML = `<img src="${images[0]}"
+                         alt="商品图"
+                         class="w-100"
+                         style="max-height:520px;width:100%;height:auto;object-fit:contain;background:#f7f7f7;border-radius:16px;cursor:pointer;"
+                         onclick="showImageModal(this.src)">`;
+
+                    }
+                }
+            }
+        })();
+
+        function showImageModal(src) {
+            const modal = document.getElementById('imageModal');
+            const modalImg = document.getElementById('modalImage');
+            modal.style.display = 'block';
+            modalImg.src = src;
+        }
+
+        function closeImageModal() {
+            document.getElementById('imageModal').style.display = 'none';
+        }
+
+        // 按ESC键关闭
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeImageModal();
+            }
+        });
+    </script>
+</body>
+</html>
+
+

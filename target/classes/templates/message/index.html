@@ -1,0 +1,606 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>消息中心 - 二手鱼塘</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background-color: #f6f6f6;
+        }
+        .brand-bg {
+            background: linear-gradient(90deg, #ffb300, #ff8a00);
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: #fff;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+        }
+        .bottom-nav-item {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .bottom-nav-item span {
+            display: block;
+        }
+        .bottom-nav-item.active {
+            color: #ff8a00;
+        }
+        .bottom-nav-item {
+            position: relative;
+        }
+        .message-badge {
+            position: absolute;
+            top: -2px;
+            right: 50%;
+            transform: translateX(20px);
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            background: #ff4d4f;
+            border-radius: 9px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #fff;
+            font-weight: bold;
+            line-height: 18px;
+        }
+        .message-badge.show {
+            display: flex;
+        }
+        .content-with-nav {
+            padding-bottom: 70px;
+        }
+        .message-card {
+            background: #fff;
+            border-radius: 14px;
+            box-shadow: 0 6px 18px rgba(0,0,0,.06);
+            padding: 14px 16px;
+            position: relative;
+            border-left: 4px solid #ffb300;
+        }
+        .message-card.read {
+            border-left-color: #e5e5e5;
+            opacity: 0.9;
+        }
+        .message-type {
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+        }
+        .badge-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #ff4d4f;
+            display: inline-block;
+            margin-right: 6px;
+        }
+        .message-time {
+            font-size: 12px;
+            color: #999;
+        }
+        .delete-btn {
+            color: #ff6b6b;
+            background: none;
+            border: none;
+            padding: 4px 8px;
+            font-size: 12px;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: background 0.2s;
+        }
+        .delete-btn:hover {
+            background: #fff5f5;
+        }
+        /* 现代简约风格删除确认弹窗 */
+        .confirm-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .confirm-backdrop.show {
+            display: flex;
+        }
+        .confirm-dialog {
+            width: 78%;
+            max-width: 360px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+            padding: 18px 18px 12px;
+        }
+        .confirm-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .confirm-text {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+        .confirm-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .confirm-btn {
+            border-radius: 999px;
+            padding: 6px 16px;
+            font-size: 13px;
+            font-weight: 500;
+            border: none;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .confirm-btn-cancel {
+            background: #f5f5f5;
+            color: #666;
+        }
+        .confirm-btn-cancel:hover {
+            background: #e8e8e8;
+        }
+        .confirm-btn-danger {
+            background: #ff4d4f;
+            color: #fff;
+        }
+        .confirm-btn-danger:hover {
+            background: #ff3333;
+        }
+    </style>
+</head>
+<body>
+<div class="brand-bg text-white pb-3 pt-3">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <div class="fw-bold fs-5">消息中心</div>
+                <small>查看系统通知和交易消息</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-3 content-with-nav">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <div class="fw-semibold">我的消息</div>
+            <small class="text-muted" th:text="'未读 ' + ${unreadCount} + ' 条'">未读 0 条</small>
+        </div>
+        <form th:if="${unreadCount > 0}" th:action="@{/messages/readAll}" method="post" class="m-0" id="readAllForm">
+            <button type="button" class="btn btn-sm btn-outline-secondary" id="readAllBtn">全部已读</button>
+        </form>
+    </div>
+
+    <div th:if="${#lists.isEmpty(threads)}" class="bg-white rounded-3 p-4 text-center text-muted">
+        暂无消息
+    </div>
+
+    <div class="d-flex flex-column gap-3" th:if="${!#lists.isEmpty(threads)}">
+        <div class="message-card" th:each="t : ${threads}"
+             th:classappend="${t.unread == 0} ? ' read' : ''">
+            <div class="d-flex justify-content-between align-items-start mb-1">
+                <div class="d-flex align-items-center gap-2">
+                    <span class="badge-dot" th:if="${t.unread > 0}"></span>
+                    <span class="fw-semibold" th:text="${t.postTitle != null ? t.postTitle : (t.productTitle != null ? ('关于商品：' + t.productTitle) : '系统消息')}">标题</span>
+                    <span class="message-type text-white"
+                          th:classappend="${t.lastType}=='order' ? ' bg-primary' : (${t.lastType}=='chat' ? ' bg-success' : (${t.lastType}=='pond' ? ' bg-info' : ' bg-warning'))"
+                          th:text="${t.lastType == 'order'} ? '订单' : (${t.lastType == 'chat'} ? '聊天' : (${t.lastType == 'pond'} ? '鱼塘' : '系统'))">系统</span>
+                </div>
+                <span class="message-time" th:text="${#temporals.format(t.lastTime,'MM-dd HH:mm')}">12-12 12:12</span>
+            </div>
+            <div class="text-muted small">
+                <span class="fw-semibold" th:if="${t.otherName != null}" th:text="${t.otherName + '：'}">来源：</span>
+                <span th:text="${t.lastContent}">消息内容</span>
+            </div>
+            <div class="mt-2 d-flex justify-content-between align-items-center">
+                <div class="small">
+                    <a th:if="${t.lastType == 'chat' and t.productId != null and t.otherUserId != null}" 
+                       class="text-decoration-none"
+                       th:href="@{'/messages/thread'(productId=${t.productId}, with=${t.otherUserId})}">
+                        进入对话
+                    </a>
+                    <a th:if="${t.lastType == 'pond' and t.postId != null}" 
+                       class="text-decoration-none"
+                       th:href="@{'/pond/post/' + ${t.postId}}">
+                        查看动态
+                    </a>
+                </div>
+                <div class="d-flex align-items-center gap-2">
+                    <span th:if="${t.unread > 0}" class="badge text-bg-danger" th:text="${t.unread}">未读</span>
+                    <span th:if="${t.unread == 0}" class="text-muted small">已读</span>
+                    <form class="message-delete-form" 
+                          th:action="@{/messages/delete}" 
+                          method="post" 
+                          style="display: inline;">
+                        <input type="hidden" name="productId" th:value="${t.productId}">
+                        <input type="hidden" name="postId" th:value="${t.postId}">
+                        <input type="hidden" name="otherUserId" th:value="${t.otherUserId}">
+                        <button type="button" class="delete-btn" onclick="openDeleteConfirm(this.closest('form'))">删除</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="bottom-nav">
+    <a th:href="@{/}" class="text-decoration-none bottom-nav-item">
+        <span>🏠</span>
+        <span>首页</span>
+    </a>
+    <a th:href="@{/pond}" class="text-decoration-none bottom-nav-item">
+        <span>🐟</span>
+        <span>鱼塘</span>
+    </a>
+    <a th:href="@{/product/publish}" class="text-decoration-none bottom-nav-item">
+        <span>➕</span>
+        <span>发布</span>
+    </a>
+    <a th:href="@{/messages}" class="text-decoration-none bottom-nav-item active" id="messagesNavItem">
+        <span>💬</span>
+        <span>消息</span>
+        <span class="message-badge" id="messageBadge">0</span>
+    </a>
+    <a th:if="${session.username == null}" th:href="@{/auth/login}" class="text-decoration-none bottom-nav-item">
+        <span>👤</span>
+        <span>我的</span>
+    </a>
+    <a th:if="${session.username != null}" th:href="@{/user/center}" class="text-decoration-none bottom-nav-item active">
+        <span>👤</span>
+        <span>个人中心</span>
+    </a>
+</div>
+
+<script>
+    (function() {
+        const currentUserId = [[${currentUserId}]];
+        let isPolling = true;
+        let lastUnreadCount = [[${unreadCount}]];
+
+        // 格式化时间
+        function formatTime(dateStr) {
+            if (!dateStr) return '';
+            try {
+                const date = new Date(dateStr);
+                if (isNaN(date.getTime())) return '';
+                const month = String(date.getMonth() + 1).padStart(2, '0');
+                const day = String(date.getDate()).padStart(2, '0');
+                const hours = String(date.getHours()).padStart(2, '0');
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return month + '-' + day + ' ' + hours + ':' + minutes;
+            } catch (e) {
+                return '';
+            }
+        }
+
+        // 更新未读数量
+        function updateUnreadCount(count) {
+            const unreadElement = document.querySelector('.text-muted small');
+            if (unreadElement) {
+                unreadElement.textContent = '未读 ' + count + ' 条';
+            }
+            
+            // 更新底部导航栏消息数量徽章
+            const messageBadge = document.getElementById('messageBadge');
+            if (messageBadge) {
+                if (count > 0) {
+                    messageBadge.textContent = count > 99 ? '99+' : count;
+                    messageBadge.classList.add('show');
+                } else {
+                    messageBadge.classList.remove('show');
+                }
+            }
+            
+            // 更新"全部已读"按钮显示
+            const readAllForm = document.querySelector('form[action*="/messages/readAll"]');
+            if (count > 0) {
+                if (!readAllForm) {
+                    const headerDiv = document.querySelector('.d-flex.justify-content-between.align-items-center.mb-3');
+                    if (headerDiv) {
+                        const form = document.createElement('form');
+                        form.action = '/messages/readAll';
+                        form.method = 'post';
+                        form.className = 'm-0';
+                        form.innerHTML = '<button class="btn btn-sm btn-outline-secondary">全部已读</button>';
+                        headerDiv.appendChild(form);
+                    }
+                }
+            } else {
+                if (readAllForm) {
+                    readAllForm.remove();
+                }
+            }
+        }
+
+        // 更新线程列表
+        function updateThreads(threads) {
+            const container = document.querySelector('.d-flex.flex-column.gap-3');
+            const emptyDiv = document.querySelector('.bg-white.rounded-3.p-4.text-center.text-muted');
+            
+            if (threads.length === 0) {
+                if (!emptyDiv) {
+                    const empty = document.createElement('div');
+                    empty.className = 'bg-white rounded-3 p-4 text-center text-muted';
+                    empty.textContent = '暂无消息';
+                    const mainContainer = document.querySelector('.container.mt-3.content-with-nav');
+                    if (mainContainer && container) {
+                        mainContainer.insertBefore(empty, container);
+                        container.style.display = 'none';
+                    }
+                }
+                return;
+            }
+
+            if (emptyDiv) {
+                emptyDiv.remove();
+            }
+            if (container) {
+                container.style.display = '';
+            }
+
+            // 清空现有线程并重新渲染
+            if (container) {
+                container.innerHTML = '';
+                
+                threads.forEach(t => {
+                    const card = document.createElement('div');
+                    card.className = 'message-card' + (t.unread === 0 ? ' read' : '');
+                    const productTitle = t.productTitle || '';
+                    const postTitle = t.postTitle || '';
+                    const otherName = t.otherName || '';
+                    const lastContent = t.lastContent || '';
+                    const lastType = t.lastType || 'system';
+                    const unread = t.unread || 0;
+                    const productId = t.productId || null;
+                    const postId = t.postId || null;
+                    const otherUserId = t.otherUserId || null;
+                    
+                    // 确定标题显示
+                    let titleText = '系统消息';
+                    if (postTitle) {
+                        titleText = escapeHtml(postTitle);
+                    } else if (productTitle) {
+                        titleText = '关于商品：' + escapeHtml(productTitle);
+                    }
+                    
+                    // 确定操作链接
+                    let actionLink = '<div></div>';
+                    if (lastType === 'chat' && productId && otherUserId) {
+                        actionLink = '<div class="small"><a class="text-decoration-none" href="/messages/thread?productId=' + productId + '&with=' + otherUserId + '">进入对话</a></div>';
+                    } else if (lastType === 'pond' && postId) {
+                        actionLink = '<div class="small"><a class="text-decoration-none" href="/pond/post/' + postId + '">查看动态</a></div>';
+                    }
+                    
+                    const deleteForm = `
+                        <form class="message-delete-form" action="/messages/delete" method="post" style="display: inline;">
+                            <input type="hidden" name="productId" value="${productId || ''}">
+                            <input type="hidden" name="postId" value="${postId || ''}">
+                            <input type="hidden" name="otherUserId" value="${otherUserId || ''}">
+                            <button type="button" class="delete-btn" onclick="openDeleteConfirm(this.closest('form'))">删除</button>
+                        </form>
+                    `;
+
+                    card.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-start mb-1">
+                            <div class="d-flex align-items-center gap-2">
+                                ${unread > 0 ? '<span class="badge-dot"></span>' : ''}
+                                <span class="fw-semibold">${titleText}</span>
+                                <span class="message-type text-white ${getTypeClass(lastType)}">${getTypeText(lastType)}</span>
+                            </div>
+                            <span class="message-time">${formatTime(t.lastTime)}</span>
+                        </div>
+                        <div class="text-muted small">
+                            ${otherName ? '<span class="fw-semibold">' + escapeHtml(otherName) + '：</span>' : ''}
+                            <span>${escapeHtml(lastContent)}</span>
+                        </div>
+                        <div class="mt-2 d-flex justify-content-between align-items-center">
+                            ${actionLink}
+                            <div class="d-flex align-items-center gap-2">
+                                ${unread > 0 ? 
+                                    '<span class="badge text-bg-danger">' + unread + '</span>' : 
+                                    '<span class="text-muted small">已读</span>'}
+                                ${deleteForm}
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(card);
+                });
+            }
+        }
+
+        function getTypeClass(type) {
+            if (type === 'order') return 'bg-primary';
+            if (type === 'chat') return 'bg-success';
+            if (type === 'pond') return 'bg-info';
+            return 'bg-warning';
+        }
+
+        function getTypeText(type) {
+            if (type === 'order') return '订单';
+            if (type === 'chat') return '聊天';
+            if (type === 'pond') return '鱼塘';
+            return '系统';
+        }
+
+        function escapeHtml(text) {
+            if (!text) return '';
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 轮询获取最新数据
+        function pollMessages() {
+            if (!isPolling) return;
+            fetch('/messages/api')
+                .then(res => res.json())
+                .then(data => {
+                    if (data.error) {
+                        console.error('获取消息失败:', data.error);
+                        return;
+                    }
+                    
+                    // 更新未读数量
+                    const unreadCount = data.unreadCount || 0;
+                    if (unreadCount !== lastUnreadCount) {
+                        updateUnreadCount(unreadCount);
+                        lastUnreadCount = unreadCount;
+                    }
+                    
+                    // 更新线程列表
+                    if (data.threads) {
+                        updateThreads(data.threads);
+                    }
+                })
+                .catch(err => {
+                    console.error('轮询错误:', err);
+                });
+        }
+
+        // 页面加载时初始化红点状态
+        updateUnreadCount(lastUnreadCount);
+
+        // 每2秒轮询一次
+        const pollInterval = setInterval(pollMessages, 2000);
+
+        // 页面可见性变化时暂停/恢复轮询
+        document.addEventListener('visibilitychange', function() {
+            isPolling = !document.hidden;
+            if (isPolling) {
+                pollMessages();
+            }
+        });
+
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', function() {
+            clearInterval(pollInterval);
+        });
+
+        // "全部已读"按钮 AJAX 处理
+        const readAllBtn = document.getElementById('readAllBtn');
+        if (readAllBtn) {
+            readAllBtn.addEventListener('click', function() {
+                fetch('/messages/readAll', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(res => {
+                    if (res.ok) {
+                        // 立即更新未读数量为0
+                        updateUnreadCount(0);
+                        lastUnreadCount = 0;
+                        // 立即刷新消息列表
+                        setTimeout(pollMessages, 100);
+                    }
+                })
+                .catch(err => {
+                    console.error('全部已读失败:', err);
+                });
+            });
+        }
+
+        // 删除消息确认弹窗
+        let currentDeleteForm = null;
+
+        // 将删除函数暴露到全局作用域
+        window.openDeleteConfirm = function(form) {
+            currentDeleteForm = form;
+            const modal = document.getElementById('deleteMessageModal');
+            if (modal) {
+                modal.classList.add('show');
+            }
+        };
+
+        window.closeDeleteConfirm = function() {
+            const modal = document.getElementById('deleteMessageModal');
+            if (modal) {
+                modal.classList.remove('show');
+            }
+            currentDeleteForm = null;
+        };
+
+        window.confirmDelete = function() {
+            if (currentDeleteForm) {
+                const formData = new FormData(currentDeleteForm);
+                fetch('/messages/delete', {
+                    method: 'POST',
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: formData
+                })
+                .then(res => res.json())
+                .then(data => {
+                    if (data.success) {
+                        window.closeDeleteConfirm();
+                        // 立即刷新消息列表
+                        setTimeout(pollMessages, 100);
+                    } else if (data.error) {
+                        alert('删除失败：' + data.error);
+                    }
+                })
+                .catch(err => {
+                    console.error('删除失败:', err);
+                    alert('删除失败，请重试');
+                });
+            }
+        };
+
+        // 点击背景关闭弹窗
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.id === 'deleteMessageModal') {
+                window.closeDeleteConfirm();
+            }
+        });
+
+        // 使用事件委托处理删除按钮点击（处理动态添加的元素）
+        document.addEventListener('click', function(e) {
+            if (e.target && e.target.classList.contains('delete-btn') && e.target.closest('.message-delete-form')) {
+                e.preventDefault();
+                e.stopPropagation();
+                const form = e.target.closest('.message-delete-form');
+                if (form) {
+                    window.openDeleteConfirm(form);
+                }
+            }
+        });
+    })();
+</script>
+
+<!-- 删除消息确认弹窗 -->
+<div id="deleteMessageModal" class="confirm-backdrop">
+    <div class="confirm-dialog" onclick="event.stopPropagation()">
+        <div class="confirm-title">删除消息</div>
+        <div class="confirm-text">确定要删除这条消息吗？删除后将无法恢复。</div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn confirm-btn-cancel" onclick="closeDeleteConfirm()">取消</button>
+            <button type="button" class="confirm-btn confirm-btn-danger" onclick="confirmDelete()">删除</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
+

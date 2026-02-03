@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>商品列表 - 二手鱼塘</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background: #fff7e0;
+        }
+        .brand-bg {
+            background: linear-gradient(120deg, #ffb300, #ff8a00);
+        }
+        .search-bar {
+            border-radius: 999px;
+            background-color: rgba(255,255,255,.95);
+            padding: 6px 14px;
+            box-shadow: 0 8px 18px rgba(0,0,0,.08);
+        }
+        .product-card {
+            border-radius: 18px;
+            overflow: hidden;
+            background: #fff;
+            box-shadow: 0 6px 18px rgba(0,0,0,.06);
+            display: flex;
+            flex-direction: column;
+            height: 100%;
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
+        }
+        .product-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 24px rgba(0,0,0,.1);
+        }
+        .product-card-image {
+            position: relative;
+            padding-top: 70%; /* 7:10 宽高比 */
+            background: #f7f7f7;
+            overflow: hidden;
+        }
+        .product-card-image img {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            transition: transform 0.3s ease;
+        }
+        .product-card:hover .product-card-image img {
+            transform: scale(1.05);
+        }
+        .product-card-body {
+            padding: 8px 10px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+        .product-title {
+            font-size: 13px;
+            font-weight: 600;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            color: #333;
+        }
+        .product-meta {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 2px;
+        }
+        .product-price {
+            color: #ff4d4f;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .product-tag {
+            border-radius: 999px;
+            padding: 1px 8px;
+            border: 1px solid #eee;
+            font-size: 11px;
+            color: #999;
+            max-width: 70px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            background: #f8f9fa;
+        }
+        .filter-pill {
+            border-radius: 999px;
+            border: 1px solid rgba(255,138,0,.4);
+            padding: 6px 14px;
+            font-size: 13px;
+            margin-right: 8px;
+            margin-bottom: 8px;
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: #ff8a00;
+            background-color: rgba(255,255,255,.7);
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: #fff;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+        }
+        .bottom-nav-item {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+        }
+        .bottom-nav-item span {
+            display: block;
+        }
+        .bottom-nav-item.active {
+            color: #ff8a00;
+        }
+        .bottom-nav-item {
+            position: relative;
+        }
+        .message-badge {
+            position: absolute;
+            top: -2px;
+            right: 50%;
+            transform: translateX(20px);
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            background: #ff4d4f;
+            border-radius: 9px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #fff;
+            font-weight: bold;
+            line-height: 18px;
+        }
+        .message-badge.show {
+            display: flex;
+        }
+        .content-with-nav {
+            padding-bottom: 90px;
+        }
+    </style>
+</head>
+<body>
+<div class="brand-bg text-white pb-3 pt-3">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <div class="fw-bold fs-5">在售好物</div>
+                <small>浏览附近和全站的闲置商品</small>
+            </div>
+            <div>
+                <a class="text-white small text-decoration-none"
+                   th:if="${session.username == null}"
+                   th:href="@{/auth/login}">登录 / 注册</a>
+
+            </div>
+        </div>
+        <form class="d-flex align-items-center gap-2" th:action="@{/product/list}" method="get">
+            <div class="search-bar flex-grow-1 d-flex align-items-center gap-2">
+                <span class="text-muted">🔍</span>
+                <input class="form-control border-0 p-0" type="text" name="keyword"
+                       th:value="${keyword}" placeholder="搜索手机、数码、服饰等">
+                <input type="hidden" name="category" th:value="${category}">
+            </div>
+            <button class="btn btn-sm btn-outline-light ms-2" type="submit">站内搜</button>
+        </form>
+    </div>
+</div>
+
+<div class="container mt-3 content-with-nav">
+    <div class="row" th:if="${#lists.isEmpty(products)}">
+        <div class="col">
+            <p class="text-muted small mt-2">当前暂无在售商品，快去发布一个吧～</p>
+        </div>
+    </div>
+
+    <div class="d-flex flex-wrap mb-3">
+        <a th:href="@{/product/list}" class="filter-pill text-decoration-none"
+           th:classappend="${#strings.isEmpty(category) ? ' bg-white shadow-sm' : ''}">
+            全部
+        </a>
+        <a th:href="@{/product/list(category='手机数码')}" class="filter-pill text-decoration-none"
+           th:classappend="${category == '手机数码' ? ' bg-white shadow-sm' : ''}">📱 手机数码</a>
+        <a th:href="@{/product/list(category='电脑办公')}" class="filter-pill text-decoration-none"
+           th:classappend="${category == '电脑办公' ? ' bg-white shadow-sm' : ''}">💻 电脑办公</a>
+        <a th:href="@{/product/list(category='潮流服饰')}" class="filter-pill text-decoration-none"
+           th:classappend="${category == '潮流服饰' ? ' bg-white shadow-sm' : ''}">👕 潮流服饰</a>
+        <a th:href="@{/product/list(category='家居生活')}" class="filter-pill text-decoration-none"
+           th:classappend="${category == '家居生活' ? ' bg-white shadow-sm' : ''}">🏠 家居生活</a>
+    </div>
+
+    <div class="row row-cols-2 row-cols-md-4 g-3">
+        <div class="col" th:each="p : ${products}"
+             th:with="firstImage=${p.imageUrl != null && #strings.contains(p.imageUrl, ',') ? #strings.substringBefore(p.imageUrl, ',') : p.imageUrl}">
+            <a class="text-decoration-none text-dark" th:href="@{'/product/detail'(id=${p.id})}">
+                <div class="product-card">
+                    <div class="product-card-image">
+                        <img th:if="${firstImage != null and !firstImage.isEmpty()}"
+                             th:src="@{${firstImage}}"
+                             alt="商品图">
+                        <div th:if="${firstImage == null or firstImage.isEmpty()}"
+                             class="d-flex align-items-center justify-content-center position-absolute inset-0 text-muted small">
+                            无图
+                        </div>
+                    </div>
+                    <div class="product-card-body">
+                        <div class="product-title" th:text="${p.title}"></div>
+                        <div class="product-meta">
+                            <span class="product-price" th:text="'￥' + ${p.price}"></span>
+                            <span class="product-tag" th:text="${p.category ?: '其他'}"></span>
+                        </div>
+                    </div>
+                </div>
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="bottom-nav">
+    <a th:href="@{/}" class="text-decoration-none bottom-nav-item">
+        <span>🏠</span>
+        <span>首页</span>
+    </a>
+    <a th:href="@{/pond}" class="text-decoration-none bottom-nav-item">
+        <span>🐟</span>
+        <span>鱼塘</span>
+    </a>
+    <a th:href="@{/product/publish}" class="text-decoration-none bottom-nav-item">
+        <span>➕</span>
+        <span>发布</span>
+    </a>
+    <a th:href="@{/messages}" class="text-decoration-none bottom-nav-item" id="messagesNavItem">
+        <span>💬</span>
+        <span>消息</span>
+        <span class="message-badge" id="messageBadge">0</span>
+    </a>
+    <a th:if="${session.username == null}" th:href="@{/auth/login}" class="text-decoration-none bottom-nav-item">
+        <span>👤</span>
+        <span>我的</span>
+    </a>
+    <a th:if="${session.username != null}" th:href="@{/user/center}" class="text-decoration-none bottom-nav-item">
+        <span>👤</span>
+        <span>个人中心</span>
+    </a>
+</div>
+
+<script>
+    // 全局消息数量提示
+    (function() {
+        const messageBadge = document.getElementById('messageBadge');
+        if (!messageBadge) return;
+        
+        let isPolling = true;
+        let lastUnreadCount = -1;
+        
+        function updateMessageBadge(unreadCount) {
+            if (unreadCount !== lastUnreadCount) {
+                if (unreadCount > 0) {
+                    messageBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                    messageBadge.classList.add('show');
+                } else {
+                    messageBadge.classList.remove('show');
+                }
+                lastUnreadCount = unreadCount;
+            }
+        }
+        
+        function checkUnreadMessages() {
+            if (!isPolling) return;
+            fetch('/messages/unread-count')
+                .then(res => res.json())
+                .then(data => {
+                    const unreadCount = data.unreadCount || 0;
+                    updateMessageBadge(unreadCount);
+                })
+                .catch(err => {});
+        }
+        
+        const pollInterval = setInterval(checkUnreadMessages, 2000);
+        checkUnreadMessages();
+        
+        document.addEventListener('visibilitychange', function() {
+            isPolling = !document.hidden;
+            if (isPolling) checkUnreadMessages();
+        });
+        
+        window.addEventListener('focus', function() {
+            checkUnreadMessages();
+        });
+        
+        window.addEventListener('beforeunload', function() {
+            clearInterval(pollInterval);
+        });
+    })();
+</script>
+
+</body>
+</html>

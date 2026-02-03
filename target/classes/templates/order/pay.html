@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>支付订单 - 二手鱼塘</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background: #fff7e0;
+        }
+        .brand-bg {
+            background: linear-gradient(120deg, #ffb300, #ff8a00);
+        }
+        .pay-card {
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: 0 6px 20px rgba(0,0,0,.08);
+            padding: 24px;
+            margin-bottom: 16px;
+        }
+        .product-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 12px;
+            object-fit: contain;
+            background: #f5f5f5;
+        }
+        .amount-display {
+            text-align: center;
+            padding: 24px;
+            background: linear-gradient(135deg, #fff3e0, #ffe0b2);
+            border-radius: 16px;
+            margin: 20px 0;
+        }
+        .amount-label {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 8px;
+        }
+        .amount-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #ff8a00;
+        }
+    </style>
+</head>
+<body>
+<div class="brand-bg text-white pb-3 pt-3">
+    <div class="container">
+        <div class="d-flex align-items-center">
+            <a th:href="@{/order/my}" class="text-white text-decoration-none me-3">❮</a>
+            <div class="fw-bold fs-5">支付订单</div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-3 mb-5">
+    <div th:if="${error}" class="alert alert-danger" th:text="${error}">错误信息</div>
+    
+    <div class="pay-card" th:if="${order != null and product != null}">
+        <h6 class="mb-3">订单信息</h6>
+        <div class="d-flex gap-3 mb-3">
+            <div th:if="${product.imageUrl != null}">
+                <img th:src="${#strings.arraySplit(product.imageUrl, ',')[0]}" 
+                     class="product-image" alt="商品图">
+            </div>
+            <div class="flex-grow-1">
+                <div class="fw-bold mb-1" th:text="${product.title}">商品标题</div>
+                <div class="text-muted small">订单号：<span th:text="${order.id}"></span></div>
+            </div>
+        </div>
+        
+        <div class="amount-display">
+            <div class="amount-label">支付金额</div>
+            <div class="amount-value" th:text="'￥' + ${order.amount}">￥0.00</div>
+        </div>
+
+        <div class="alert alert-info small">
+            <div class="mb-1">💡 提示：</div>
+            <div>这是模拟支付流程，点击"确认支付"即可完成订单支付。</div>
+        </div>
+
+        <form th:action="@{'/order/pay/' + ${order.id}}" method="post">
+            <div class="d-flex gap-2">
+                <a th:href="@{/order/my}" class="btn btn-outline-secondary flex-fill">稍后支付</a>
+                <button type="submit" class="btn btn-warning flex-fill text-white fw-bold">确认支付</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+</body>
+</html>
+

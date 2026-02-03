@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="zh-CN" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>鱼塘社区 - 二手鱼塘</title>
+    <link rel="stylesheet"
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <style>
+        body {
+            background: #fff7e0;
+        }
+        .brand-bg {
+            background: linear-gradient(120deg, #ffb300, #ff8a00);
+        }
+        .post-card {
+            border-radius: 18px;
+            background: #fff;
+            box-shadow: 0 10px 24px rgba(0,0,0,.08);
+            margin-bottom: 16px;
+            overflow: hidden;
+            position: relative;
+        }
+        .post-card-link {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .post-card-link:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 28px rgba(0,0,0,.12);
+        }
+        .post-header {
+            padding: 16px;
+            border-bottom: 1px solid #f0f0f0;
+        }
+        .post-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            background: #f0f0f0;
+        }
+        .post-content {
+            padding: 16px;
+        }
+        .post-images {
+            margin-top: 12px;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(100px, 1fr));
+            gap: 8px;
+        }
+        .post-image {
+            width: 100%;
+            aspect-ratio: 1;
+            object-fit: cover;
+            border-radius: 8px;
+            cursor: pointer;
+        }
+        .post-footer {
+            padding: 12px 16px;
+            border-top: 1px solid #f0f0f0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #666;
+            font-size: 14px;
+        }
+        .post-actions {
+            display: flex;
+            gap: 20px;
+        }
+        .post-action {
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .post-action:hover {
+            color: #ff8a00;
+        }
+        .bottom-nav-item {
+            position: relative;
+        }
+        .category-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            background: #fff7e0;
+            color: #ff8a00;
+            border-radius: 12px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+        .filter-bar {
+            background: #fff;
+            padding: 12px 16px;
+            border-radius: 18px;
+            margin-bottom: 16px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+        .filter-btn {
+            padding: 4px 12px;
+            border: 1px solid #ddd;
+            border-radius: 16px;
+            background: #fff;
+            color: #666;
+            font-size: 12px;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .filter-btn.active {
+            background: #ff8a00;
+            color: #fff;
+            border-color: #ff8a00;
+        }
+        .filter-btn:hover {
+            border-color: #ff8a00;
+            color: #ff8a00;
+        }
+        .publish-btn {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background: linear-gradient(120deg, #ffb300, #ff8a00);
+            color: #fff;
+            border: none;
+            font-size: 24px;
+            box-shadow: 0 4px 12px rgba(255,138,0,.3);
+            z-index: 999;
+            cursor: pointer;
+        }
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            background-color: #fff;
+            border-top: 1px solid #eee;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            z-index: 1000;
+        }
+        .bottom-nav-item {
+            font-size: 12px;
+            color: #666;
+            text-align: center;
+            position: relative;
+        }
+        .bottom-nav-item span {
+            display: block;
+        }
+        .bottom-nav-item.active {
+            color: #ff8a00;
+        }
+        .message-badge {
+            position: absolute;
+            top: -2px;
+            right: 50%;
+            transform: translateX(20px);
+            min-width: 18px;
+            height: 18px;
+            padding: 0 5px;
+            background: #ff4d4f;
+            border-radius: 9px;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: #fff;
+            font-weight: bold;
+            line-height: 18px;
+        }
+        .message-badge.show {
+            display: flex;
+        }
+        .content-with-nav {
+            padding-bottom: 90px;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: #999;
+        }
+
+        /* 现代简约删除弹窗（鱼塘列表） */
+        .confirm-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(0,0,0,0.35);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+        .confirm-backdrop.show {
+            display: flex;
+        }
+        .confirm-dialog {
+            width: 78%;
+            max-width: 360px;
+            background: #fff;
+            border-radius: 16px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+            padding: 18px 18px 12px;
+        }
+        .confirm-title {
+            font-size: 15px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: #333;
+        }
+        .confirm-text {
+            font-size: 13px;
+            color: #666;
+            margin-bottom: 16px;
+        }
+        .confirm-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+        }
+        .confirm-btn {
+            border-radius: 999px;
+            padding: 6px 16px;
+            font-size: 13px;
+            border: none;
+        }
+        .confirm-btn-cancel {
+            background: #f5f5f5;
+            color: #666;
+        }
+        .confirm-btn-danger {
+            background: #ff4d4f;
+            color: #fff;
+        }
+    </style>
+</head>
+<body>
+<div class="brand-bg text-white pb-3 pt-3">
+    <div class="container">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+                <div class="fw-bold fs-5">鱼塘社区</div>
+                <small>同城圈子 · 兴趣交流 · 闲置分享</small>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="container mt-3 content-with-nav">
+    <!-- 筛选栏 -->
+    <div class="filter-bar">
+        <a th:href="@{/pond}" class="filter-btn" th:classappend="${category == null and city == null} ? 'active'">全部</a>
+        <a th:href="@{/pond(category='digital')}" class="filter-btn" th:classappend="${category == 'digital'} ? 'active'">数码</a>
+        <a th:href="@{/pond(category='photography')}" class="filter-btn" th:classappend="${category == 'photography'} ? 'active'">摄影</a>
+        <a th:href="@{/pond(category='acg')}" class="filter-btn" th:classappend="${category == 'acg'} ? 'active'">二次元</a>
+        <a th:href="@{/pond(category='figure')}" class="filter-btn" th:classappend="${category == 'figure'} ? 'active'">手办</a>
+        <a th:href="@{/pond(category='local')}" class="filter-btn" th:classappend="${category == 'local'} ? 'active'">同城</a>
+    </div>
+
+    <!-- 动态列表 -->
+    <div th:if="${#lists.isEmpty(posts)}" class="empty-state">
+        <div style="font-size: 48px; margin-bottom: 16px;">🐟</div>
+        <div>还没有动态，快来发布第一条吧～</div>
+    </div>
+
+    <div th:each="post : ${posts}" class="post-card">
+        <a th:href="@{/pond/post/{id}(id=${post.id})}" class="post-card-link">
+            <div class="post-header">
+                <div class="d-flex align-items-center gap-2">
+                    <img th:src="${post.userAvatar != null ? post.userAvatar : '/uploads/default-avatar.png'}" 
+                         class="post-avatar" 
+                         th:alt="${post.username}">
+                    <div class="flex-grow-1">
+                        <div class="fw-bold small">
+                            <span th:text="${post.username}">用户</span>
+                            <span th:if="${post.category != null and post.category != 'other'}" 
+                                  class="category-badge"
+                                  th:text="${post.category == 'digital' ? '数码' : (post.category == 'photography' ? '摄影' : (post.category == 'acg' ? '二次元' : (post.category == 'figure' ? '手办' : (post.category == 'local' ? '同城' : post.category))))}">分类</span>
+                        </div>
+                        <div class="text-muted" style="font-size: 11px;" 
+                             th:text="${#temporals.format(post.createTime, 'yyyy-MM-dd HH:mm')}">时间</div>
+                    </div>
+                </div>
+            </div>
+            <div class="post-content">
+                <div style="white-space: pre-line; line-height: 1.6;" th:text="${post.content}">动态内容</div>
+                <div th:if="${post.images != null and !#strings.isEmpty(post.images)}" class="post-images">
+                    <img th:each="img : ${#strings.arraySplit(post.images, ',')}" 
+                         th:src="${img}" 
+                         class="post-image"
+                         th:attr="data-image=${img}"
+                         onclick="event.stopPropagation(); window.open(this.getAttribute('data-image'), '_blank');">
+                </div>
+            </div>
+            <div class="post-footer">
+                <div class="text-muted" style="font-size: 11px;" th:text="${post.city != null ? post.city : ''}">城市</div>
+                <div class="post-actions">
+                    <span class="post-action">
+                        <span>💬</span>
+                        <span th:text="${post.commentCount}">0</span>
+                    </span>
+                </div>
+            </div>
+        </a>
+        <div class="position-absolute" style="top: 16px; right: 16px; z-index: 10;" th:if="${userId != null and userId == post.userId}">
+            <form th:action="@{/pond/delete/{id}(id=${post.id})}" method="post" style="display: inline;"
+                  class="pond-delete-form">
+                <button type="submit" class="btn btn-sm text-danger" style="border: none; background: none;" onclick="event.stopPropagation();">删除</button>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- 发布按钮 -->
+<button th:if="${session.username != null}" 
+        class="publish-btn" 
+        onclick="window.location.href='/pond/publish'"
+        title="发布动态">➕</button>
+
+<div class="bottom-nav">
+    <a th:href="@{/}" class="text-decoration-none bottom-nav-item">
+        <span>🏠</span>
+        <span>首页</span>
+    </a>
+    <a th:href="@{/pond}" class="text-decoration-none bottom-nav-item active">
+        <span>🐟</span>
+        <span>鱼塘</span>
+    </a>
+    <a th:href="@{/product/publish}" class="text-decoration-none bottom-nav-item">
+        <span>➕</span>
+        <span>发布</span>
+    </a>
+    <a th:href="@{/messages}" class="text-decoration-none bottom-nav-item" id="messagesNavItem">
+        <span>💬</span>
+        <span>消息</span>
+        <span class="message-badge" id="messageBadge">0</span>
+    </a>
+    <a th:if="${session.username == null}" th:href="@{/auth/login}" class="text-decoration-none bottom-nav-item">
+        <span>👤</span>
+        <span>我的</span>
+    </a>
+    <a th:if="${session.username != null}" th:href="@{/user/center}" class="text-decoration-none bottom-nav-item">
+        <span>👤</span>
+        <span>个人中心</span>
+    </a>
+</div>
+
+<script>
+    // 全局消息数量提示
+    (function() {
+        const messageBadge = document.getElementById('messageBadge');
+        if (!messageBadge) return;
+        
+        let isPolling = true;
+        let lastUnreadCount = -1;
+        
+        function updateMessageBadge(unreadCount) {
+            if (unreadCount !== lastUnreadCount) {
+                if (unreadCount > 0) {
+                    messageBadge.textContent = unreadCount > 99 ? '99+' : unreadCount;
+                    messageBadge.classList.add('show');
+                } else {
+                    messageBadge.classList.remove('show');
+                }
+                lastUnreadCount = unreadCount;
+            }
+        }
+        
+        function checkUnreadMessages() {
+            if (!isPolling) return;
+            fetch('/messages/unread-count')
+                .then(res => res.json())
+                .then(data => {
+                    const unreadCount = data.unreadCount || 0;
+                    updateMessageBadge(unreadCount);
+                })
+                .catch(err => {});
+        }
+        
+        const pollInterval = setInterval(checkUnreadMessages, 2000);
+        checkUnreadMessages();
+        
+        document.addEventListener('visibilitychange', function() {
+            isPolling = !document.hidden;
+            if (isPolling) checkUnreadMessages();
+        });
+        
+        window.addEventListener('focus', function() {
+            checkUnreadMessages();
+        });
+        
+        window.addEventListener('beforeunload', function() {
+            clearInterval(pollInterval);
+        });
+    })();
+
+    // --- 鱼塘列表 删除弹窗逻辑 ---
+    let pondPendingDeleteForm = null;
+    function openPondDeleteConfirm(form) {
+        pondPendingDeleteForm = form;
+        const modal = document.getElementById('pondDeleteConfirmModal');
+        if (modal) modal.classList.add('show');
+    }
+    function closePondDeleteConfirm() {
+        const modal = document.getElementById('pondDeleteConfirmModal');
+        if (modal) modal.classList.remove('show');
+        pondPendingDeleteForm = null;
+    }
+    function confirmPondDelete() {
+        if (pondPendingDeleteForm) {
+            const f = pondPendingDeleteForm;
+            closePondDeleteConfirm();
+            f.submit();
+        }
+    }
+    document.querySelectorAll('.pond-delete-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            openPondDeleteConfirm(form);
+        });
+    });
+</script>
+
+<!-- 鱼塘列表：现代简约删除动态弹窗 -->
+<div id="pondDeleteConfirmModal" class="confirm-backdrop">
+    <div class="confirm-dialog">
+        <div class="confirm-title">删除动态</div>
+        <div class="confirm-text">确定要删除这条动态吗？删除后将无法恢复。</div>
+        <div class="confirm-actions">
+            <button type="button" class="confirm-btn confirm-btn-cancel" onclick="closePondDeleteConfirm()">取消</button>
+            <button type="button" class="confirm-btn confirm-btn-danger" onclick="confirmPondDelete()">删除</button>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
